@@ -40,3 +40,26 @@ export function treeToText(node: TreeNode, indent = 0): string {
 
   return result;
 }
+export function treeToPaths(tree: TreeNode, includeRoot: boolean = true): string {
+  const paths: string[] = [];
+
+  function traverse(node: TreeNode, currentPath: string) {
+    // Add current node path
+    const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+    paths.push(fullPath);
+
+    if (node.children) {
+      node.children.forEach(child => traverse(child, fullPath));
+    }
+  }
+
+  if (includeRoot) {
+    traverse(tree, '');
+    // Remove the root entry '.' if you don't want it
+    return paths.join('\n');
+  } else {
+    // Skip root, start from its children
+    tree.children?.forEach(child => traverse(child, ''));
+    return paths.join('\n');
+  }
+}

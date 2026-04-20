@@ -6,9 +6,10 @@ interface Props {
   tree: TreeNode;
   onChange: (tree: TreeNode) => void;
   theme: 'light' | 'dark';
+  showRoot?: boolean;
 }
 
-export default function TreeView({ tree, onChange, theme }: Props) {
+export default function TreeView({ tree, onChange, theme,showRoot=false }: Props) {
   const bgColor = theme === 'dark' ? '#1f2937' : '#f9fafb';
   const textColor = theme === 'dark' ? '#e5e7eb' : '#111827';
 
@@ -76,6 +77,26 @@ export default function TreeView({ tree, onChange, theme }: Props) {
     insertNodeAtPath(tree, toPath, node);
   };
 
+  // If showRoot is true, render the root node itself (which is always a folder)
+  if (showRoot) {
+    return (
+      <div className="overflow-auto text-sm" style={{ backgroundColor: bgColor, color: textColor }}>
+        <ul className="pl-2">
+          <NodeItem
+            node={tree}
+            path={[]}
+            root={tree}
+            onChange={onChange}
+            updateNode={updateNode}
+            moveNode={moveNode}
+            isRoot
+          />
+        </ul>
+      </div>
+    );
+  }
+
+  // Otherwise, render only children (root hidden)
   return (
     <div className="overflow-auto text-sm" style={{ backgroundColor: bgColor, color: textColor }}>
       <ul className="pl-2">
@@ -110,6 +131,7 @@ interface NodeItemProps {
     fromPath: number[],
     toPath: number[]
   ) => void;
+  isRoot?: boolean;
 }
 
 function NodeItem({
@@ -119,61 +141,81 @@ function NodeItem({
   onChange,
   updateNode,
   moveNode,
+  isRoot = false,
 }: NodeItemProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(node.name);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const save = () => {
+    if (isRoot) {
+      // Optionally disallow renaming root, or allow it:
+      // updateNode(root, path, value);
+      // onChange({ ...root });
+      // For now, just cancel edit
+      setEditing(false);
+      return;
+    }
     updateNode(root, path, value);
     onChange({ ...root });
     setEditing(false);
   };
 
   const icon = node.type === 'folder' ? '📁' : '📄';
+const draggable = !isRoot;
+  const handleDragStart = (e: React.DragEvent) => {
+    if (isRoot) {
+      e.preventDefault();
+      return;
+    }
+    e.stopPropagation();
+    e.dataTransfer.setData('path', JSON.stringify(path));
+    e.dataTransfer.effectAllowed = 'move';
+  };
 
+  const handleDrop = (e: React.DragEvent) => {
+    if (isRoot) {
+      e.preventDefault();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const fromPath: number[] = JSON.parse(e.dataTransfer.getData('path'));
+
+    if (JSON.stringify(fromPath) === JSON.stringify(path)) return;
+
+    if (
+      path.length >= fromPath.length &&
+      path.slice(0, fromPath.length).every((v, i) => v === fromPath[i])
+    ) {
+      return;
+    }
+
+    moveNode(root, fromPath, path);
+    onChange({ ...root });
+  };
   return (
     <li
       className={`
         mb-1 px-2 py-1 rounded-md
-        cursor-move select-none
-        hover:bg-gray-200 dark:hover:bg-gray-700
+        ${draggable ? 'cursor-move' : 'cursor-default'}
+        select-none
+        hover:bg-gray-200 dark:hover:bg-gray-800
         transition-colors
         ${isDragOver ? 'bg-blue-100 dark:bg-blue-900/30' : ''}
       `}
-      draggable
-      onDragStart={(e) => {
-        e.stopPropagation();
-        e.dataTransfer.setData('path', JSON.stringify(path));
-        e.dataTransfer.effectAllowed = 'move';
-      }}
+      draggable={draggable}
+      onDragStart={handleDragStart}
       onDragOver={(e) => {
+        if (isRoot) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         setIsDragOver(true);
       }}
       onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-
-        const fromPath: number[] = JSON.parse(
-          e.dataTransfer.getData('path')
-        );
-
-        if (JSON.stringify(fromPath) === JSON.stringify(path)) return;
-
-        if (
-          path.length >= fromPath.length &&
-          path.slice(0, fromPath.length).every((v, i) => v === fromPath[i])
-        ) {
-          return;
-        }
-
-        moveNode(root, fromPath, path);
-        onChange({ ...root });
-      }}
+      onDrop={handleDrop}
     >
       <div className="flex items-center gap-1">
         {editing ? (
@@ -195,11 +237,12 @@ function NodeItem({
               }
             }}
             autoFocus
+            disabled={isRoot}
           />
         ) : (
           <Tooltip content={node.type === 'folder' ? 'Folder' : 'File'}>
             <span
-              onDoubleClick={() => setEditing(true)}
+              onDoubleClick={() => !isRoot && setEditing(true)}
               className="flex items-center gap-1"
             >
               <span className="text-lg leading-none">{icon}</span>
@@ -215,7 +258,7 @@ function NodeItem({
             <NodeItem
               key={i}
               node={child}
-              path={[...path, i]}
+              path={isRoot ? [i] : [...path, i]}
               root={root}
               onChange={onChange}
               updateNode={updateNode}

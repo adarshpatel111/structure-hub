@@ -2,9 +2,10 @@ interface Props {
   value: string;
   onChange: (val: string) => void;
   theme: 'light' | 'dark';
+  mode?: 'tree' | 'paths'; // new prop
 }
 
-export default function CliPreview({ value, onChange, theme }: Props) {
+export default function CliPreview({ value, onChange, theme, mode = 'tree' }: Props) {
   return (
     <textarea
       className={`
@@ -15,6 +16,7 @@ export default function CliPreview({ value, onChange, theme }: Props) {
       `}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      readOnly={mode === 'paths'}
     />
   );
 }

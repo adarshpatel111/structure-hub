@@ -12,6 +12,7 @@ import { parseCLIToTree } from './utils/cliParser';
 import { treeToCLI, treeToText } from './utils/serializer';
 import type { TreeNode } from './utils/types';
 import { Computer, Copy, Moon, Sun } from 'lucide-react';
+import { treeToPaths } from './utils/serializer';
 
 export default function App() {
   const { theme, setTheme } = useTheme();
@@ -37,7 +38,13 @@ export default function App() {
   const [tree, setTree] = useState<TreeNode>(initialTree);
   const [cli, setCli] = useState(treeToCLI(initialTree));
   const [showRoot, setShowRoot] = useState(true);
+  const [cliMode, setCliMode] = useState<'tree' | 'paths'>('tree');
 
+  // Compute what to display in CLI panel
+  const displayCli = cliMode === 'tree' 
+    ? cli 
+    : treeToPaths(tree, showRoot);
+  
   const handleTextChange = (val: string) => {
     setText(val);
     try {
@@ -48,6 +55,7 @@ export default function App() {
   };
 
   const handleCliChange = (val: string) => {
+    if (cliMode === 'paths') return; // ignore edits in path mode
     setCli(val);
     try {
       const t = parseCLIToTree(val);
@@ -55,6 +63,7 @@ export default function App() {
       setText(treeToText(t));
     } catch { }
   };
+
 
   const handleTreeChange = (t: TreeNode) => {
     setTree(t);
@@ -93,6 +102,14 @@ export default function App() {
             <ThemeDropdown theme={theme} setTheme={setTheme} />
           </Dropdown>
 
+{/* CLI Mode Toggle */}
+          <button
+            onClick={() => setCliMode(m => m === 'tree' ? 'paths' : 'tree')}
+            className="px-3 py-1 bg-gray-200 dark:bg-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition cursor-pointer"
+            title={cliMode === 'tree' ? 'Switch to Full Paths' : 'Switch to Tree View'}
+          >
+            {cliMode === 'tree' ? '📄 Paths' : '🌲 Tree'}
+          </button>
           {/* Root Toggle */}
           <button
             onClick={() => setShowRoot(!showRoot)}
@@ -106,21 +123,19 @@ export default function App() {
 
       {/* Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[85vh]">
-
         <Panel title="Text Editor">
           <TextEditor value={text} onChange={handleTextChange} theme={resolvedTheme} />
         </Panel>
 
-        <Panel title="CLI View">
-          <CliPreview value={cli} onChange={handleCliChange} theme={resolvedTheme} />
+        <Panel title={`CLI View ${cliMode === 'paths' ? '(Full Paths)' : ''}`}>
+          <CliPreview value={displayCli} onChange={handleCliChange} theme={resolvedTheme} mode={cliMode}/>
         </Panel>
 
         <Panel title="Tree View">
           <div className="p-2 overflow-auto h-full">
-            <TreeView tree={tree} onChange={handleTreeChange} theme={resolvedTheme} />
+            <TreeView tree={tree} onChange={handleTreeChange} theme={resolvedTheme} showRoot={showRoot} />
           </div>
         </Panel>
-
       </div>
     </div>
   );
