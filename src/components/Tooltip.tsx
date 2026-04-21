@@ -7,14 +7,16 @@ interface Props {
 
 export default function Tooltip({ content, children }: Props) {
   const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const show = () => {
     timeoutRef.current = setTimeout(() => setVisible(true), 300);
   };
 
   const hide = () => {
-    clearTimeout(timeoutRef.current);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     setVisible(false);
   };
 

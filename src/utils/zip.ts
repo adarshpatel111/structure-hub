@@ -5,11 +5,11 @@ import type { TreeNode } from './types';
 export async function downloadZip(tree: TreeNode) {
   const zip = new JSZip();
 
-  function add(node: TreeNode, folder: any) {
+  function add(node: TreeNode, folder: JSZip) {
     node.children?.forEach((child) => {
       if (child.type === 'folder') {
         const newFolder = folder.folder(child.name);
-        add(child, newFolder);
+        if (newFolder) add(child, newFolder);
       } else {
         folder.file(child.name, '');
       }
