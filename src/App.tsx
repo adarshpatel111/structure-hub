@@ -11,8 +11,9 @@ import { parseTextToTree } from './utils/parser';
 import { parseCLIToTree } from './utils/cliParser';
 import { treeToCLI, treeToText } from './utils/serializer';
 import type { TreeNode } from './utils/types';
-import { Computer, Copy, Moon, Sun } from 'lucide-react';
+import { Computer, Copy, FolderDot, FolderTree, Moon, Route, Sun, } from 'lucide-react';
 import { treeToPaths } from './utils/serializer';
+import ToggleButton from './components/ToggleButton';
 
 export default function App() {
   const { theme, setTheme } = useTheme();
@@ -23,11 +24,11 @@ export default function App() {
         : 'light'
       : theme;
 
-      const iconMap = {
-  light: <Sun size={16} />,
-  dark: <Moon size={16} />,
-  system: <Computer size={16} />,
-};
+  const iconMap = {
+    light: <Sun size={16} />,
+    dark: <Moon size={16} />,
+    system: <Computer size={16} />,
+  };
 
   const initialText = `project/
   src/
@@ -41,10 +42,10 @@ export default function App() {
   const [cliMode, setCliMode] = useState<'tree' | 'paths'>('tree');
 
   // Compute what to display in CLI panel
-  const displayCli = cliMode === 'tree' 
-    ? cli 
+  const displayCli = cliMode === 'tree'
+    ? cli
     : treeToPaths(tree, showRoot);
-  
+
   const handleTextChange = (val: string) => {
     setText(val);
     try {
@@ -55,7 +56,7 @@ export default function App() {
   };
 
   const handleCliChange = (val: string) => {
-    if (cliMode === 'paths') return; // ignore edits in path mode
+    if (cliMode === 'paths') return;
     setCli(val);
     try {
       const t = parseCLIToTree(val);
@@ -79,7 +80,7 @@ export default function App() {
 
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Folder Designer</h1>
+        <h1 className="text-xl font-bold"><img src="/favicon.svg" alt="Logo" className="w-8 h-8 inline-block mr-2" />Folder Flow</h1>
         <div className="flex gap-2 items-center">
 
           {/* Copy Menu */}
@@ -94,6 +95,7 @@ export default function App() {
                 navigator.clipboard.writeText(link);
                 alert('Share link copied!');
               }}
+              size="md"
             />
           </Dropdown>
 
@@ -102,25 +104,30 @@ export default function App() {
             <ThemeDropdown theme={theme} setTheme={setTheme} />
           </Dropdown>
 
-{/* CLI Mode Toggle */}
-          <button
-            onClick={() => setCliMode(m => m === 'tree' ? 'paths' : 'tree')}
-            className="px-3 py-1 bg-gray-200 dark:bg-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition cursor-pointer"
-            title={cliMode === 'tree' ? 'Switch to Full Paths' : 'Switch to Tree View'}
-          >
-            {cliMode === 'tree' ? '📄 Paths' : '🌲 Tree'}
-          </button>
-          {/* Root Toggle */}
-          <button
-            onClick={() => setShowRoot(!showRoot)}
-            className="px-3 py-1 bg-gray-200 dark:bg-gray-800 rounded hover:bg-gray-300 dark:hover:bg-gray-700 transition cursor-pointer"
-          >
-            {showRoot ? 'Hide Root' : 'Show Root'}
-          </button>
-
+          <div className="relative inline-flex bg-gray-200 dark:bg-gray-800 rounded-full p-1">
+            {/* Sliding background */}
+            <ToggleButton
+              checked={cliMode === "tree"}
+              onChange={(val) => setCliMode(val ? "tree" : "paths")}
+              onIcon={<FolderTree className="w-4 h-4" />}
+              offIcon={<Route className="w-4 h-4" />}
+              tooltipOn="Tree view"
+              tooltipOff="Paths view"
+              size="sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <ToggleButton
+              checked={showRoot}
+              onChange={setShowRoot}
+              onIcon={<FolderDot className="w-4 h-4" />}
+              tooltipOn="Show Root"
+              tooltipOff="Hide Root"
+              size="sm"
+            />
+          </div>
         </div>
       </div>
-
       {/* Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[85vh]">
         <Panel title="Text Editor">
@@ -128,7 +135,7 @@ export default function App() {
         </Panel>
 
         <Panel title={`CLI View ${cliMode === 'paths' ? '(Full Paths)' : ''}`}>
-          <CliPreview value={displayCli} onChange={handleCliChange} theme={resolvedTheme} mode={cliMode}/>
+          <CliPreview value={displayCli} onChange={handleCliChange} theme={resolvedTheme} mode={cliMode} />
         </Panel>
 
         <Panel title="Tree View">
